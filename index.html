@@ -188,10 +188,10 @@
                     </div>
                 </section>
 
-                <!-- 2. 分割 PDF -->
+                <!-- 2. 分割 PDF (更新版) -->
                 <section id="section-split" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">分割 PDF</h2>
-                    <p class="text-gray-500 mb-6 text-sm">提取特定的頁面範圍並儲存為新文件。</p>
+                    <p class="text-gray-500 mb-6 text-sm">將 PDF 文件依需求進行切割或提取。</p>
 
                     <div class="space-y-6">
                         <!-- 拖曳區塊 -->
@@ -202,9 +202,38 @@
                             <p class="text-xs text-gray-400 mt-2" id="filename-split">尚未選擇檔案</p>
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">頁面範圍 (例如: 1, 3-5, 8)</label>
-                            <input type="text" id="split-range" placeholder="例如: 1-5" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-accent focus:border-accent outline-none">
+                        <!-- 分割模式設定 -->
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-4">
+                            <div class="flex flex-col gap-3">
+                                <label class="flex items-start cursor-pointer hover:bg-gray-100 p-2 rounded transition-colors">
+                                    <input type="radio" name="split-mode" value="range" checked onchange="updateSplitUI()" class="mt-1 text-accent focus:ring-accent">
+                                    <div class="ml-3">
+                                        <span class="block text-sm font-bold text-gray-700">指定範圍合併 (單一檔案)</span>
+                                        <span class="block text-xs text-gray-500">輸入範圍 (如 1, 3-5)，將這些頁面提取並合併為一個新的 PDF。</span>
+                                    </div>
+                                </label>
+                                
+                                <label class="flex items-start cursor-pointer hover:bg-gray-100 p-2 rounded transition-colors">
+                                    <input type="radio" name="split-mode" value="chunk" onchange="updateSplitUI()" class="mt-1 text-accent focus:ring-accent">
+                                    <div class="ml-3">
+                                        <span class="block text-sm font-bold text-gray-700">每 N 頁切分 (多個檔案/ZIP)</span>
+                                        <span class="block text-xs text-gray-500">輸入數字 (如 2)，將文件每 2 頁切成一份，打包下載。</span>
+                                    </div>
+                                </label>
+                                
+                                <label class="flex items-start cursor-pointer hover:bg-gray-100 p-2 rounded transition-colors">
+                                    <input type="radio" name="split-mode" value="explode" onchange="updateSplitUI()" class="mt-1 text-accent focus:ring-accent">
+                                    <div class="ml-3">
+                                        <span class="block text-sm font-bold text-gray-700">指定頁面切出 (多個檔案/ZIP)</span>
+                                        <span class="block text-xs text-gray-500">輸入頁碼 (如 1, 3-5)，將選定頁面"分別"存成獨立檔案，打包下載。</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="pt-2 border-t border-gray-200">
+                                <label id="split-input-label" class="block text-sm font-medium text-gray-700 mb-1">輸入範圍</label>
+                                <input type="text" id="split-input" placeholder="例如: 1-5, 8" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-accent focus:border-accent outline-none">
+                            </div>
                         </div>
 
                         <button onclick="processSplit()" class="btn-primary w-fit">
@@ -551,6 +580,24 @@
             }
         }
 
+        // --- 分割模式 UI 更新 ---
+        function updateSplitUI() {
+            const mode = document.querySelector('input[name="split-mode"]:checked').value;
+            const label = document.getElementById('split-input-label');
+            const input = document.getElementById('split-input');
+
+            if (mode === 'range') {
+                label.textContent = "輸入範圍 (保留並合併)";
+                input.placeholder = "例如: 1-5, 8";
+            } else if (mode === 'chunk') {
+                label.textContent = "每 N 頁切分 (輸入數字)";
+                input.placeholder = "例如: 2 (每 2 頁存成一個檔)";
+            } else if (mode === 'explode') {
+                label.textContent = "指定頁面切出 (分別存檔)";
+                input.placeholder = "例如: 1, 3-5 (提取後分存為多個檔)";
+            }
+        }
+
         // --- 通用工具函式 ---
         function showStatus(msg, type = 'loading') {
             const statusBox = document.getElementById('status-message');
@@ -683,46 +730,114 @@
             }
         }
 
-        // 2. 分割
+        // 2. 分割 (Process Split) - 更新支援三種模式
         async function processSplit() {
             const fileInput = document.getElementById('file-split');
-            const rangeInput = document.getElementById('split-range').value;
+            const mode = document.querySelector('input[name="split-mode"]:checked').value;
+            const inputVal = document.getElementById('split-input').value;
             
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
-            if (!rangeInput) return showStatus("請輸入頁面範圍", 'error');
+            if (!inputVal) return showStatus("請輸入參數", 'error');
 
-            showStatus("正在分割...", 'loading');
+            showStatus("正在分析 PDF...", 'loading');
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
-                const newPdf = await PDFDocument.create();
-                
-                // 解析範圍 (例如 "1, 3-5")
-                const pagesToKeep = new Set();
                 const totalPages = pdfDoc.getPageCount();
-                
-                rangeInput.split(',').forEach(part => {
-                    if (part.includes('-')) {
-                        const [start, end] = part.split('-').map(n => parseInt(n.trim()));
-                        for (let i = start; i <= end; i++) pagesToKeep.add(i);
-                    } else {
-                        pagesToKeep.add(parseInt(part.trim()));
+                const zip = new JSZip();
+
+                // 模式 1: 指定範圍合併 (單一檔案)
+                if (mode === 'range') {
+                    const newPdf = await PDFDocument.create();
+                    const pagesToKeep = new Set();
+                    
+                    inputVal.split(',').forEach(part => {
+                        if (part.includes('-')) {
+                            const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                            for (let i = start; i <= end; i++) pagesToKeep.add(i);
+                        } else {
+                            pagesToKeep.add(parseInt(part.trim()));
+                        }
+                    });
+
+                    const indices = Array.from(pagesToKeep)
+                        .filter(p => p >= 1 && p <= totalPages)
+                        .map(p => p - 1);
+
+                    if (indices.length === 0) throw new Error("無效的頁面範圍");
+
+                    const copiedPages = await newPdf.copyPages(pdfDoc, indices);
+                    copiedPages.forEach(page => newPdf.addPage(page));
+
+                    const pdfBytes = await newPdf.save();
+                    download(pdfBytes, "split_result.pdf", "application/pdf");
+                    showStatus("分割完成！", 'success');
+                }
+                // 模式 2: 每 N 頁切分 (多個檔案 -> Zip)
+                else if (mode === 'chunk') {
+                    const n = parseInt(inputVal);
+                    if (isNaN(n) || n < 1) throw new Error("請輸入有效的大於 0 數字");
+
+                    showStatus("正在批次切分...", 'loading');
+                    let partCount = 0;
+
+                    for (let i = 0; i < totalPages; i += n) {
+                        const newPdf = await PDFDocument.create();
+                        const pageIndices = [];
+                        // 收集接下來 N 頁的 index
+                        for (let j = 0; j < n && (i + j) < totalPages; j++) {
+                            pageIndices.push(i + j);
+                        }
+
+                        const copiedPages = await newPdf.copyPages(pdfDoc, pageIndices);
+                        copiedPages.forEach(page => newPdf.addPage(page));
+                        
+                        const pdfBytes = await newPdf.save();
+                        // 檔名 part_1.pdf, part_2.pdf ...
+                        partCount++;
+                        zip.file(`part_${partCount}_pages_${i+1}-${i+pageIndices.length}.pdf`, pdfBytes);
                     }
-                });
 
-                const indices = Array.from(pagesToKeep)
-                    .filter(p => p >= 1 && p <= totalPages)
-                    .map(p => p - 1); // 轉為 0-based index
+                    showStatus("正在打包下載...", 'loading');
+                    const content = await zip.generateAsync({ type: "blob" });
+                    saveAs(content, "split_chunks.zip");
+                    showStatus("切分完成！", 'success');
+                }
+                // 模式 3: 指定頁面切出 (多個檔案 -> Zip)
+                else if (mode === 'explode') {
+                    const pagesToExtract = new Set();
+                    
+                    inputVal.split(',').forEach(part => {
+                        if (part.includes('-')) {
+                            const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                            for (let i = start; i <= end; i++) pagesToExtract.add(i);
+                        } else {
+                            pagesToExtract.add(parseInt(part.trim()));
+                        }
+                    });
 
-                if (indices.length === 0) throw new Error("無效的頁面範圍");
+                    const validPages = Array.from(pagesToExtract).filter(p => p >= 1 && p <= totalPages);
+                    if (validPages.length === 0) throw new Error("無效的頁面範圍");
 
-                const copiedPages = await newPdf.copyPages(pdfDoc, indices);
-                copiedPages.forEach(page => newPdf.addPage(page));
+                    showStatus("正在分別提取...", 'loading');
 
-                const pdfBytes = await newPdf.save();
-                download(pdfBytes, "split_result.pdf", "application/pdf");
-                showStatus("分割完成！", 'success');
+                    for (const pageNum of validPages) {
+                        const newPdf = await PDFDocument.create();
+                        const copiedPages = await newPdf.copyPages(pdfDoc, [pageNum - 1]);
+                        newPdf.addPage(copiedPages[0]);
+                        
+                        const pdfBytes = await newPdf.save();
+                        zip.file(`page_${pageNum}.pdf`, pdfBytes);
+                    }
+
+                    showStatus("正在打包下載...", 'loading');
+                    const content = await zip.generateAsync({ type: "blob" });
+                    saveAs(content, "split_pages.zip");
+                    showStatus("提取完成！", 'success');
+                }
+
             } catch (err) {
+                console.error(err);
                 showStatus("錯誤：" + err.message, 'error');
             }
         }
