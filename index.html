@@ -410,12 +410,16 @@
                     </div>
                 </section>
 
-                <!-- 8. 壓縮 PDF -->
+                <!-- 8. 壓縮 PDF (更新版) -->
                 <section id="section-compress" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">壓縮 PDF</h2>
                     <p class="text-gray-500 mb-6 text-sm">優化 PDF 結構以減少檔案大小。</p>
-                    <div class="bg-blue-50 text-blue-800 p-3 rounded-md text-xs mb-4">
-                        <i class="fa-solid fa-circle-info"></i> 注意：由於此工具完全在瀏覽器端運行，壓縮能力主要來自於移除未使用的物件與元數據，對於已經高度壓縮或包含大量圖片的檔案效果可能有限。
+                    <div class="bg-blue-50 text-blue-800 p-3 rounded-md text-xs mb-4 space-y-2">
+                        <div><i class="fa-solid fa-circle-info"></i> <strong>壓縮模式說明：</strong></div>
+                        <ul class="list-disc pl-5">
+                            <li><strong>低壓縮率 (保留文字)：</strong> 僅優化檔案結構，保留所有文字與原圖解析度。最安全，但壓縮幅度有限。</li>
+                            <li><strong>中/高壓縮率：</strong> 將 PDF 頁面轉為圖片再重新打包。<strong>注意：文字將變為圖片無法選取</strong>，但能大幅減少檔案大小。</li>
+                        </ul>
                     </div>
 
                     <div class="space-y-6">
@@ -426,9 +430,18 @@
                             <p class="text-sm text-gray-600 font-medium">拖曳 PDF 至此 或 點擊選擇</p>
                             <p class="text-xs text-gray-400 mt-2" id="filename-compress">尚未選擇檔案</p>
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">壓縮品質</label>
+                            <select id="compress-level" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md bg-white">
+                                <option value="medium" selected>中等壓縮率 (推薦) - 轉圖片重製，品質適中</option>
+                                <option value="high">高壓縮率 - 轉圖片重製，檔案最小</option>
+                                <option value="low">低壓縮率 - 保留文字，優化結構</option>
+                            </select>
+                        </div>
                         
                         <button onclick="processCompress()" class="btn-primary w-fit">
-                            <i class="fa-solid fa-file-zipper mr-2"></i> 嘗試壓縮
+                            <i class="fa-solid fa-file-zipper mr-2"></i> 開始壓縮
                         </button>
                     </div>
                 </section>
@@ -947,10 +960,6 @@
                             x = (pWidth - wmWidth) / 2; 
                             y = (pHeight - wmHeight) / 2;
                     }
-
-                    // 修正旋轉時的中心點偏移 (選擇性，這裡使用簡單繪製)
-                    // pdf-lib 的 rotate 是繞著圖片左下角旋轉，若要繞中心旋轉需要更複雜的幾何計算
-                    // 這裡為了保持 UX 簡單，我們直接繪製
                     
                     page.drawImage(wmImage, {
                         x: x,
@@ -997,23 +1006,80 @@
             }
         }
 
-        // 8. 壓縮 (Repack)
+        // 8. 壓縮 (Repack / Rasterize)
         async function processCompress() {
             const fileInput = document.getElementById('file-compress');
+            const level = document.getElementById('compress-level').value;
+            
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
 
-            showStatus("正在優化...", 'loading');
+            showStatus("正在初始化壓縮...", 'loading');
+            
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
-                
-                // pdf-lib 的 save 本身會移除一些未使用的物件
-                // useObjectStreams: false 可以相容舊版，但 true 通常比較小
-                const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
-                
-                download(pdfBytes, "compressed.pdf", "application/pdf");
-                showStatus("優化完成！", 'success');
+
+                // 模式 1: 低壓縮率 (僅優化結構，不轉圖片)
+                if (level === 'low') {
+                    showStatus("正在優化結構...", 'loading');
+                    const pdfDoc = await PDFDocument.load(arrayBuffer);
+                    const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
+                    download(pdfBytes, "compressed_low.pdf", "application/pdf");
+                    showStatus("優化完成！", 'success');
+                    return;
+                }
+
+                // 模式 2 & 3: 中/高壓縮率 (轉圖片重製)
+                // 參數設定
+                let scale = 1.0;
+                let quality = 0.5;
+
+                if (level === 'medium') {
+                    scale = 2.0; // 較高解析度，保持閱讀性
+                    quality = 0.7; // 中等 JPG 品質
+                } else if (level === 'high') {
+                    scale = 1.5; // 解析度稍降
+                    quality = 0.5; // 較低 JPG 品質
+                }
+
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                const newPdfDoc = await PDFDocument.create();
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    showStatus(`正在重製第 ${i} / ${pdf.numPages} 頁 (轉圖片壓縮中)...`, 'loading');
+                    
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: scale });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    // 轉為 JPG DataURL
+                    const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    const img = await newPdfDoc.embedJpg(imgDataUrl);
+                    
+                    // 計算原始頁面大小 (以 scale 1.0 為基準)
+                    const originalViewport = page.getViewport({ scale: 1.0 });
+                    
+                    const newPage = newPdfDoc.addPage([originalViewport.width, originalViewport.height]);
+                    newPage.drawImage(img, {
+                        x: 0,
+                        y: 0,
+                        width: originalViewport.width,
+                        height: originalViewport.height,
+                    });
+                }
+
+                showStatus("正在打包新文件...", 'loading');
+                const pdfBytes = await newPdfDoc.save({ useObjectStreams: true });
+                download(pdfBytes, `compressed_${level}.pdf`, "application/pdf");
+                showStatus("壓縮完成！", 'success');
+
             } catch (err) {
+                console.error(err);
                 showStatus("錯誤：" + err.message, 'error');
             }
         }
