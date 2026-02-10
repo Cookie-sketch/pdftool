@@ -285,10 +285,10 @@
                     </div>
                 </section>
 
-                <!-- 6. 浮水印 -->
+                <!-- 6. 浮水印 (更新版) -->
                 <section id="section-watermark" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">添加浮水印</h2>
-                    <p class="text-gray-500 mb-6 text-sm">在每一頁添加文字浮水印。</p>
+                    <p class="text-gray-500 mb-6 text-sm">在頁面中添加文字(支援繁體中文)或圖片浮水印。</p>
 
                     <div class="space-y-6">
                         <!-- 拖曳區塊 -->
@@ -299,22 +299,79 @@
                             <p class="text-xs text-gray-400 mt-2" id="filename-watermark">尚未選擇檔案</p>
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 浮水印設定區 -->
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-5">
+                            
+                            <!-- 類型選擇 -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">浮水印文字</label>
-                                <input type="text" id="wm-text" value="僅供參考" class="w-full p-2 border border-gray-300 rounded-md">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">浮水印類型</label>
+                                <div class="flex gap-6">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="wm-type" value="text" checked onchange="toggleWatermarkType()" class="text-accent focus:ring-accent">
+                                        <span>文字</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="wm-type" value="image" onchange="toggleWatermarkType()" class="text-accent focus:ring-accent">
+                                        <span>圖片</span>
+                                    </label>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">文字顏色 (Hex)</label>
-                                <input type="color" id="wm-color" value="#FF0000" class="h-10 w-full p-1 border border-gray-300 rounded-md">
+
+                            <!-- 文字設定 (Text Settings) -->
+                            <div id="wm-settings-text" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">文字內容 (支援繁體中文)</label>
+                                    <input type="text" id="wm-text" value="僅供參考" class="w-full p-2 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">文字顏色</label>
+                                    <input type="color" id="wm-color" value="#FF0000" class="h-10 w-full p-1 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">字體大小</label>
+                                    <input type="number" id="wm-size" value="50" class="w-full p-2 border border-gray-300 rounded-md">
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">透明度 (0.1 - 1.0)</label>
-                                <input type="number" id="wm-opacity" value="0.3" step="0.1" min="0.1" max="1" class="w-full p-2 border border-gray-300 rounded-md">
+
+                            <!-- 圖片設定 (Image Settings, 預設隱藏) -->
+                            <div id="wm-settings-image" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">上傳圖片</label>
+                                <input type="file" id="file-wm-image" accept="image/png, image/jpeg, image/jpg" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+                                <div class="text-xs text-gray-400 mt-1">支援 PNG, JPG 格式</div>
+                                <div class="mt-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">圖片縮放比例 (0.1 - 2.0)</label>
+                                    <input type="number" id="wm-image-scale" value="0.5" step="0.1" min="0.1" max="2.0" class="w-full p-2 border border-gray-300 rounded-md">
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">字體大小</label>
-                                <input type="number" id="wm-size" value="50" class="w-full p-2 border border-gray-300 rounded-md">
+
+                            <!-- 通用設定 (位置、透明度、頁碼) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 border-gray-200">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">位置</label>
+                                    <select id="wm-position" class="w-full p-2 border border-gray-300 rounded-md bg-white">
+                                        <option value="center" selected>正中間 (Center)</option>
+                                        <option value="top-left">左上 (Top-Left)</option>
+                                        <option value="top-center">中上 (Top-Center)</option>
+                                        <option value="top-right">右上 (Top-Right)</option>
+                                        <option value="middle-left">左中 (Middle-Left)</option>
+                                        <option value="middle-right">右中 (Middle-Right)</option>
+                                        <option value="bottom-left">左下 (Bottom-Left)</option>
+                                        <option value="bottom-center">中下 (Bottom-Center)</option>
+                                        <option value="bottom-right">右下 (Bottom-Right)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">頁面範圍 (留空代表全部)</label>
+                                    <input type="text" id="wm-pages" placeholder="例如: 1, 3-5 (預設全部)" class="w-full p-2 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">透明度 (0.1 - 1.0)</label>
+                                    <input type="number" id="wm-opacity" value="0.3" step="0.1" min="0.1" max="1" class="w-full p-2 border border-gray-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">旋轉角度</label>
+                                    <input type="number" id="wm-rotation" value="45" class="w-full p-2 border border-gray-300 rounded-md">
+                                </div>
                             </div>
                         </div>
 
@@ -468,6 +525,18 @@
             const activeBtn = document.getElementById(`btn-${toolId}`);
             if(activeBtn) activeBtn.classList.add('active');
         }
+        
+        // --- 浮水印類型切換 ---
+        function toggleWatermarkType() {
+            const type = document.querySelector('input[name="wm-type"]:checked').value;
+            if (type === 'text') {
+                document.getElementById('wm-settings-text').classList.remove('hidden');
+                document.getElementById('wm-settings-image').classList.add('hidden');
+            } else {
+                document.getElementById('wm-settings-text').classList.add('hidden');
+                document.getElementById('wm-settings-image').classList.remove('hidden');
+            }
+        }
 
         // --- 通用工具函式 ---
         function showStatus(msg, type = 'loading') {
@@ -497,6 +566,15 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        async function readImageFile(file) {
+             return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result); // Returns Data URL
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
@@ -713,58 +791,174 @@
             }
         }
 
-        // 6. 浮水印
+        // 6. 浮水印 (Process Watermark)
+        
+        // 輔助函式：將文字轉為圖片 DataURL (解決中文字型問題)
+        function textToImageDataUrl(text, color, size) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 放大倍率，確保文字清晰
+            const scale = 3;
+            const fontSize = size * scale;
+            const font = `${fontSize}px 'Microsoft JhengHei', 'Noto Sans TC', sans-serif`;
+            
+            ctx.font = font;
+            const metrics = ctx.measureText(text);
+            const width = Math.ceil(metrics.width);
+            const height = Math.ceil(fontSize * 1.2); // 粗略高度
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // 重新設定 Context (因為調整 canvas 大小會重置)
+            ctx.font = font;
+            ctx.fillStyle = color;
+            ctx.textBaseline = 'middle';
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillText(text, 0, height / 2);
+            
+            return {
+                dataUrl: canvas.toDataURL('image/png'),
+                width: width / scale,   // 回傳原始大小
+                height: height / scale
+            };
+        }
+
         async function processWatermark() {
             const fileInput = document.getElementById('file-watermark');
-            const text = document.getElementById('wm-text').value;
-            const colorHex = document.getElementById('wm-color').value;
+            const type = document.querySelector('input[name="wm-type"]:checked').value;
+            
+            const position = document.getElementById('wm-position').value;
             const opacity = parseFloat(document.getElementById('wm-opacity').value);
-            const size = parseInt(document.getElementById('wm-size').value);
+            const rotation = parseInt(document.getElementById('wm-rotation').value);
+            const pageRangeInput = document.getElementById('wm-pages').value;
 
-            if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
+            if (fileInput.files.length === 0) return showStatus("請選擇 PDF 檔案", 'error');
 
-            showStatus("正在添加浮水印...", 'loading');
+            showStatus("正在準備浮水印...", 'loading');
             try {
-                const arrayBuffer = await readFile(fileInput.files[0]);
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
-                
-                // 解析 Hex 顏色
-                const r = parseInt(colorHex.slice(1, 3), 16) / 255;
-                const g = parseInt(colorHex.slice(3, 5), 16) / 255;
-                const b = parseInt(colorHex.slice(5, 7), 16) / 255;
+                const pdfBuffer = await readFile(fileInput.files[0]);
+                const pdfDoc = await PDFDocument.load(pdfBuffer);
+                const totalPages = pdfDoc.getPageCount();
 
-                // 嵌入字型 (因瀏覽器限制，使用內建標準字型，僅支援英文/數字)
-                // 若要支援中文，需另外載入 .ttf 檔案，這會使單一 HTML 檔案變很大
-                // 這裡做一個簡單的 workaround: 提示僅支援英數字，或使用標準字型
-                // **注意**：pdf-lib 的 StandardFonts 不支援中文。
-                // 為了在此單檔環境下運作，我們必須使用自訂字型嵌入。
-                // 但為了不讓程式碼過大，這裡先使用內建字型，並警告使用者中文會變亂碼。
-                // 解決方案：實際專案應 fetch 一個中文字型檔。在此範例中，為了保持單檔且可運行，我們使用 Helvetica (不支援中文)。
-                // 若輸入中文，我們改用將文字畫在 Canvas 轉圖片再貼上的方式 (較複雜)，
-                // 或者在此範例中，我們提醒使用者僅限英數字，或嘗試載入一個外部字型 (如果 CORS 允許)。
-                
-                // **改進策略**：嘗試載入一個 Google Font 的 Base64 (太大了)。
-                // 妥協方案：在此範例中使用標準字型，若需中文需告知限制。
-                
-                const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                
-                // 檢查是否包含非 ASCII 字符
-                const isAscii = /^[\x00-\x7F]*$/.test(text);
-                if (!isAscii) {
-                     alert("注意：目前浮水印字型僅支援英文與數字。中文字元可能無法正確顯示。");
+                // 解析頁面範圍
+                const pagesToApply = new Set();
+                if (!pageRangeInput.trim()) {
+                    for (let i = 1; i <= totalPages; i++) pagesToApply.add(i);
+                } else {
+                    pageRangeInput.split(',').forEach(part => {
+                        if (part.includes('-')) {
+                            const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                            for (let i = start; i <= end; i++) pagesToApply.add(i);
+                        } else {
+                            const p = parseInt(part.trim());
+                            if (!isNaN(p)) pagesToApply.add(p);
+                        }
+                    });
                 }
 
+                let wmImage;
+                let wmWidth, wmHeight;
+
+                if (type === 'text') {
+                    const text = document.getElementById('wm-text').value;
+                    const color = document.getElementById('wm-color').value;
+                    const size = parseInt(document.getElementById('wm-size').value);
+                    
+                    if (!text) return showStatus("請輸入文字內容", 'error');
+
+                    // 使用 Canvas 將文字轉為圖片
+                    const { dataUrl, width, height } = textToImageDataUrl(text, color, size);
+                    wmImage = await pdfDoc.embedPng(dataUrl);
+                    wmWidth = width;
+                    wmHeight = height;
+
+                } else {
+                    const imgInput = document.getElementById('file-wm-image');
+                    const scale = parseFloat(document.getElementById('wm-image-scale').value);
+                    
+                    if (imgInput.files.length === 0) return showStatus("請上傳圖片", 'error');
+                    
+                    const imgFile = imgInput.files[0];
+                    const imgBuffer = await readImageFile(imgFile);
+                    
+                    if (imgFile.type === 'image/jpeg' || imgFile.type === 'image/jpg') {
+                        wmImage = await pdfDoc.embedJpg(imgBuffer);
+                    } else {
+                        wmImage = await pdfDoc.embedPng(imgBuffer);
+                    }
+                    
+                    const imgDims = wmImage.scale(scale);
+                    wmWidth = imgDims.width;
+                    wmHeight = imgDims.height;
+                }
+
+                showStatus("正在寫入浮水印...", 'loading');
+
                 const pages = pdfDoc.getPages();
-                pages.forEach(page => {
-                    const { width, height } = page.getSize();
-                    page.drawText(text, {
-                        x: width / 2 - (text.length * size) / 4,
-                        y: height / 2,
-                        size: size,
-                        font: font,
-                        color: rgb(r, g, b),
+                pages.forEach((page, idx) => {
+                    const pageNum = idx + 1;
+                    if (!pagesToApply.has(pageNum)) return;
+
+                    const { width: pWidth, height: pHeight } = page.getSize();
+                    let x, y;
+                    const margin = 20;
+
+                    // 計算位置
+                    switch(position) {
+                        case 'top-left': 
+                            x = margin; 
+                            y = pHeight - wmHeight - margin; 
+                            break;
+                        case 'top-center': 
+                            x = (pWidth - wmWidth) / 2; 
+                            y = pHeight - wmHeight - margin; 
+                            break;
+                        case 'top-right': 
+                            x = pWidth - wmWidth - margin; 
+                            y = pHeight - wmHeight - margin; 
+                            break;
+                        case 'middle-left': 
+                            x = margin; 
+                            y = (pHeight - wmHeight) / 2; 
+                            break;
+                        case 'center': 
+                            x = (pWidth - wmWidth) / 2; 
+                            y = (pHeight - wmHeight) / 2; 
+                            break;
+                        case 'middle-right': 
+                            x = pWidth - wmWidth - margin; 
+                            y = (pHeight - wmHeight) / 2; 
+                            break;
+                        case 'bottom-left': 
+                            x = margin; 
+                            y = margin; 
+                            break;
+                        case 'bottom-center': 
+                            x = (pWidth - wmWidth) / 2; 
+                            y = margin; 
+                            break;
+                        case 'bottom-right': 
+                            x = pWidth - wmWidth - margin; 
+                            y = margin; 
+                            break;
+                        default: // center
+                            x = (pWidth - wmWidth) / 2; 
+                            y = (pHeight - wmHeight) / 2;
+                    }
+
+                    // 修正旋轉時的中心點偏移 (選擇性，這裡使用簡單繪製)
+                    // pdf-lib 的 rotate 是繞著圖片左下角旋轉，若要繞中心旋轉需要更複雜的幾何計算
+                    // 這裡為了保持 UX 簡單，我們直接繪製
+                    
+                    page.drawImage(wmImage, {
+                        x: x,
+                        y: y,
+                        width: wmWidth,
+                        height: wmHeight,
                         opacity: opacity,
-                        rotate: degrees(45),
+                        rotate: degrees(rotation),
                     });
                 });
 
@@ -772,6 +966,7 @@
                 download(pdfBytes, "watermarked.pdf", "application/pdf");
                 showStatus("浮水印添加完成！", 'success');
             } catch (err) {
+                console.error(err);
                 showStatus("錯誤：" + err.message, 'error');
             }
         }
