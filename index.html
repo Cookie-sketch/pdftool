@@ -101,7 +101,7 @@
                     <i class="fa-solid fa-layer-group w-5 text-center"></i> 合併 PDF
                 </button>
                 <button onclick="switchTool('encrypt')" class="tool-btn w-full text-left px-4 py-3 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-3" id="btn-encrypt">
-                    <i class="fa-solid fa-lock w-5 text-center"></i> 加密 PDF
+                    <i class="fa-solid fa-lock w-5 text-center"></i> 加密/防拷 PDF
                 </button>
                 <button onclick="switchTool('decrypt')" class="tool-btn w-full text-left px-4 py-3 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-3" id="btn-decrypt">
                     <i class="fa-solid fa-unlock w-5 text-center"></i> 解密 PDF
@@ -125,7 +125,7 @@
                 <option value="extract-text">PDF 轉 Word (提取文字)</option>
                 <option value="split">分割 PDF</option>
                 <option value="merge">合併 PDF</option>
-                <option value="encrypt">加密 PDF</option>
+                <option value="encrypt">加密/防拷 PDF</option>
                 <option value="decrypt">解密 PDF</option>
                 <option value="watermark">浮水印</option>
                 <option value="rotate">旋轉 PDF</option>
@@ -145,9 +145,9 @@
             <!-- 共用檔案上傳區塊 (隱藏，由JS動態複製或使用) -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-4xl mx-auto min-h-[500px]">
                 
-                <!-- 1. PDF 轉圖檔 -->
+                <!-- 1. PDF 轉圖檔 (Updated) -->
                 <section id="section-pdf-to-img" class="tool-section">
-                    <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">PDF 轉圖片 (JPG)</h2>
+                    <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">PDF 轉圖片</h2>
                     <p class="text-gray-500 mb-6 text-sm">將 PDF 文件的每一頁轉換為高品質圖片並下載為 ZIP 壓縮檔。</p>
                     
                     <div class="flex flex-col gap-6">
@@ -159,13 +159,22 @@
                             <p class="text-sm text-gray-400 mt-2" id="filename-pdf-to-img">尚未選擇檔案</p>
                         </div>
 
+                        <div class="w-full md:w-1/3 self-center">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">輸出格式</label>
+                            <select id="img-format" class="w-full p-2 border border-gray-300 rounded-md bg-white">
+                                <option value="jpeg">JPG (最相容)</option>
+                                <option value="png">PNG (無損品質)</option>
+                                <option value="webp">WebP (檔案小)</option>
+                            </select>
+                        </div>
+
                         <button onclick="processPdfToImg()" class="btn-primary w-fit self-center">
                             <i class="fa-solid fa-play mr-2"></i> 開始轉換
                         </button>
                     </div>
                 </section>
 
-                <!-- 9. PDF 提取文字 (轉 Word) [新增] -->
+                <!-- 9. PDF 提取文字 (轉 Word) -->
                 <section id="section-extract-text" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">PDF 提取文字 (轉 Word)</h2>
                     <p class="text-gray-500 mb-6 text-sm">提取 PDF 中的純文字內容並儲存為 DOC 格式。</p>
@@ -188,7 +197,7 @@
                     </div>
                 </section>
 
-                <!-- 2. 分割 PDF (更新版) -->
+                <!-- 2. 分割 PDF -->
                 <section id="section-split" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">分割 PDF</h2>
                     <p class="text-gray-500 mb-6 text-sm">將 PDF 文件依需求進行切割或提取。</p>
@@ -264,10 +273,10 @@
                     </div>
                 </section>
 
-                <!-- 4. 加密 PDF -->
+                <!-- 4. 加密/防拷 PDF (Updated) -->
                 <section id="section-encrypt" class="tool-section hidden">
-                    <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">加密 PDF</h2>
-                    <p class="text-gray-500 mb-6 text-sm">設定密碼保護您的文件。</p>
+                    <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">加密/防拷 PDF</h2>
+                    <p class="text-gray-500 mb-6 text-sm">設定密碼保護您的文件，並限制列印、複製或修改。</p>
 
                     <div class="space-y-6">
                         <!-- 拖曳區塊 -->
@@ -278,13 +287,33 @@
                             <p class="text-xs text-gray-400 mt-2" id="filename-encrypt">尚未選擇檔案</p>
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">設定密碼</label>
-                            <input type="password" id="encrypt-password" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-accent focus:border-accent outline-none">
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">開啟密碼 (使用者密碼)</label>
+                                <input type="password" id="encrypt-password" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-accent focus:border-accent outline-none">
+                            </div>
+
+                            <div class="border-t pt-4 mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">權限設定 (取消勾選以限制功能)</label>
+                                <div class="flex flex-col gap-2">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" id="perm-print" checked class="text-accent focus:ring-accent rounded">
+                                        <span class="text-sm text-gray-700">允許列印 (Allow Printing)</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" id="perm-copy" checked class="text-accent focus:ring-accent rounded">
+                                        <span class="text-sm text-gray-700">允許複製文字/圖片 (Allow Copying)</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" id="perm-modify" checked class="text-accent focus:ring-accent rounded">
+                                        <span class="text-sm text-gray-700">允許修改內容 (Allow Modifying)</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
                         <button onclick="processEncrypt()" class="btn-primary w-fit">
-                            <i class="fa-solid fa-lock mr-2"></i> 執行加密
+                            <i class="fa-solid fa-lock mr-2"></i> 執行加密與防護
                         </button>
                     </div>
                 </section>
@@ -314,7 +343,7 @@
                     </div>
                 </section>
 
-                <!-- 6. 浮水印 (更新版) -->
+                <!-- 6. 浮水印 -->
                 <section id="section-watermark" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">添加浮水印</h2>
                     <p class="text-gray-500 mb-6 text-sm">在頁面中添加文字(支援繁體中文)或圖片浮水印。</p>
@@ -346,7 +375,7 @@
                                 </div>
                             </div>
 
-                            <!-- 文字設定 (Text Settings) -->
+                            <!-- 文字設定 -->
                             <div id="wm-settings-text" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">文字內容 (支援繁體中文)</label>
@@ -362,7 +391,7 @@
                                 </div>
                             </div>
 
-                            <!-- 圖片設定 (Image Settings, 預設隱藏) -->
+                            <!-- 圖片設定 -->
                             <div id="wm-settings-image" class="hidden">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">上傳圖片</label>
                                 <input type="file" id="file-wm-image" accept="image/png, image/jpeg, image/jpg" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
@@ -373,7 +402,7 @@
                                 </div>
                             </div>
 
-                            <!-- 通用設定 (位置、透明度、頁碼) -->
+                            <!-- 通用設定 -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 border-gray-200">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">位置</label>
@@ -410,10 +439,10 @@
                     </div>
                 </section>
 
-                <!-- 7. 旋轉 PDF -->
+                <!-- 7. 旋轉 PDF (Updated) -->
                 <section id="section-rotate" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">旋轉 PDF</h2>
-                    <p class="text-gray-500 mb-6 text-sm">將所有頁面順時針旋轉。</p>
+                    <p class="text-gray-500 mb-6 text-sm">將 PDF 頁面進行旋轉。</p>
 
                     <div class="space-y-6">
                         <!-- 拖曳區塊 -->
@@ -424,13 +453,21 @@
                             <p class="text-xs text-gray-400 mt-2" id="filename-rotate">尚未選擇檔案</p>
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">旋轉角度 (順時針)</label>
-                            <select id="rotate-angle" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md bg-white">
-                                <option value="90">90 度</option>
-                                <option value="180">180 度</option>
-                                <option value="270">270 度</option>
-                            </select>
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">旋轉角度 (順時針)</label>
+                                <select id="rotate-angle" class="w-full md:w-1/2 p-2 border border-gray-300 rounded-md bg-white">
+                                    <option value="90">90 度</option>
+                                    <option value="180">180 度</option>
+                                    <option value="270">270 度</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">旋轉頁面 (留空代表全部)</label>
+                                <input type="text" id="rotate-pages" placeholder="例如: 1, 3-5 (預設全部旋轉)" class="w-full p-2 border border-gray-300 rounded-md">
+                                <p class="text-xs text-gray-400 mt-1">若不輸入，將旋轉所有頁面。</p>
+                            </div>
                         </div>
 
                         <button onclick="processRotate()" class="btn-primary w-fit">
@@ -439,7 +476,7 @@
                     </div>
                 </section>
 
-                <!-- 8. 壓縮 PDF (更新版) -->
+                <!-- 8. 壓縮 PDF -->
                 <section id="section-compress" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">壓縮 PDF</h2>
                     <p class="text-gray-500 mb-6 text-sm">優化 PDF 結構以減少檔案大小。</p>
@@ -511,15 +548,13 @@
     <script>
         // 設定 PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+        const { PDFDocument, rgb, degrees, StandardFonts, Permission } = PDFLib;
 
         // --- 初始化 Drag & Drop 監聽 ---
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('input[type="file"]').forEach(input => {
                 const dropZone = input.closest('.drop-zone');
                 if (dropZone) {
-                    // 為了視覺回饋，我們需要監聽 input 的 drag 事件
-                    // 由於 input 覆蓋在 div 上，實際上事件是觸發在 input 上
                     ['dragenter', 'dragover'].forEach(eventName => {
                         input.addEventListener(eventName, () => {
                             dropZone.classList.add('drag-active');
@@ -557,12 +592,9 @@
 
         // --- UI 切換邏輯 ---
         function switchTool(toolId) {
-            // 隱藏所有區塊
             document.querySelectorAll('.tool-section').forEach(el => el.classList.add('hidden'));
-            // 顯示選定區塊
             document.getElementById(`section-${toolId}`).classList.remove('hidden');
             
-            // 更新按鈕狀態
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             const activeBtn = document.getElementById(`btn-${toolId}`);
             if(activeBtn) activeBtn.classList.add('active');
@@ -634,7 +666,7 @@
         async function readImageFile(file) {
              return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result); // Returns Data URL
+                reader.onload = () => resolve(reader.result); 
                 reader.onerror = reject;
                 reader.readAsArrayBuffer(file);
             });
@@ -642,17 +674,24 @@
 
         // --- 功能實作 ---
 
-        // 1. PDF 轉圖片
+        // 1. PDF 轉圖片 (Updated: JPG/PNG/WebP)
         async function processPdfToImg() {
             const fileInput = document.getElementById('file-pdf-to-img');
+            const format = document.getElementById('img-format').value;
+            
             if (fileInput.files.length === 0) return showStatus("請選擇 PDF 檔案", 'error');
 
-            showStatus("正在轉換圖片...", 'loading');
+            showStatus(`正在轉換圖片 (${format.toUpperCase()})...`, 'loading');
             try {
                 const file = fileInput.files[0];
                 const arrayBuffer = await readFile(file);
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 const zip = new JSZip();
+
+                // 設定 MIME type
+                let mimeType = 'image/jpeg';
+                if (format === 'png') mimeType = 'image/png';
+                if (format === 'webp') mimeType = 'image/webp';
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
@@ -666,16 +705,16 @@
 
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                     
-                    // 轉為 Blob
-                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-                    zip.file(`page_${i}.jpg`, blob);
+                    // 轉為 Blob (WebP/JPG 品質設為 0.8，PNG 則忽略品質參數)
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, 0.8));
+                    zip.file(`page_${i}.${format}`, blob);
                     
                     showStatus(`正在處理第 ${i} / ${pdf.numPages} 頁...`, 'loading');
                 }
 
                 showStatus("正在打包下載...", 'loading');
                 const content = await zip.generateAsync({ type: "blob" });
-                saveAs(content, "pdf_images.zip");
+                saveAs(content, `pdf_images_${format}.zip`);
                 showStatus("轉換完成！", 'success');
             } catch (err) {
                 console.error(err);
@@ -683,7 +722,7 @@
             }
         }
 
-        // 9. 提取文字 (Extract Text)
+        // 9. 提取文字
         async function processExtractText() {
             const fileInput = document.getElementById('file-extract-text');
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
@@ -698,14 +737,10 @@
                     showStatus(`正在讀取第 ${i} / ${pdf.numPages} 頁...`, 'loading');
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    
-                    // 簡單拼接：將該頁所有文字區塊用空白連接
                     const pageText = textContent.items.map(item => item.str).join(' ');
                     fullText += `--- 第 ${i} 頁 ---\n\n${pageText}\n\n`;
                 }
 
-                // 製作一個簡單的 HTML 檔案並偽裝成 .doc
-                // 這樣 Word 開啟時通常會自動識別為 HTML 內容並顯示，同時能保留 UTF-8 編碼
                 const htmlContent = `
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                     <head>
@@ -719,7 +754,6 @@
                     </html>
                 `;
 
-                // 若 Word 仍彈出編碼視窗，Blob type 設定與 meta charset 是關鍵
                 const blob = new Blob([htmlContent], { type: "application/msword;charset=utf-8" });
                 saveAs(blob, "extracted_text.doc");
                 
@@ -730,7 +764,7 @@
             }
         }
 
-        // 2. 分割 (Process Split) - 更新支援三種模式
+        // 2. 分割
         async function processSplit() {
             const fileInput = document.getElementById('file-split');
             const mode = document.querySelector('input[name="split-mode"]:checked').value;
@@ -746,7 +780,6 @@
                 const totalPages = pdfDoc.getPageCount();
                 const zip = new JSZip();
 
-                // 模式 1: 指定範圍合併 (單一檔案)
                 if (mode === 'range') {
                     const newPdf = await PDFDocument.create();
                     const pagesToKeep = new Set();
@@ -773,7 +806,6 @@
                     download(pdfBytes, "split_result.pdf", "application/pdf");
                     showStatus("分割完成！", 'success');
                 }
-                // 模式 2: 每 N 頁切分 (多個檔案 -> Zip)
                 else if (mode === 'chunk') {
                     const n = parseInt(inputVal);
                     if (isNaN(n) || n < 1) throw new Error("請輸入有效的大於 0 數字");
@@ -784,7 +816,6 @@
                     for (let i = 0; i < totalPages; i += n) {
                         const newPdf = await PDFDocument.create();
                         const pageIndices = [];
-                        // 收集接下來 N 頁的 index
                         for (let j = 0; j < n && (i + j) < totalPages; j++) {
                             pageIndices.push(i + j);
                         }
@@ -793,7 +824,6 @@
                         copiedPages.forEach(page => newPdf.addPage(page));
                         
                         const pdfBytes = await newPdf.save();
-                        // 檔名 part_1.pdf, part_2.pdf ...
                         partCount++;
                         zip.file(`part_${partCount}_pages_${i+1}-${i+pageIndices.length}.pdf`, pdfBytes);
                     }
@@ -803,10 +833,8 @@
                     saveAs(content, "split_chunks.zip");
                     showStatus("切分完成！", 'success');
                 }
-                // 模式 3: 指定頁面切出 (多個檔案 -> Zip)
                 else if (mode === 'explode') {
                     const pagesToExtract = new Set();
-                    
                     inputVal.split(',').forEach(part => {
                         if (part.includes('-')) {
                             const [start, end] = part.split('-').map(n => parseInt(n.trim()));
@@ -850,9 +878,6 @@
             showStatus("正在合併...", 'loading');
             try {
                 const mergedPdf = await PDFDocument.create();
-                
-                // 依檔案選擇順序處理 (通常瀏覽器會依檔名或選擇順序)
-                // 若要嚴格排序，需將 fileList 轉 Array 並 sort
                 const files = Array.from(fileInput.files).sort((a,b) => a.name.localeCompare(b.name));
 
                 for (const file of files) {
@@ -870,11 +895,16 @@
             }
         }
 
-        // 4. 加密
+        // 4. 加密 (Updated: Restrictions)
         async function processEncrypt() {
             const fileInput = document.getElementById('file-encrypt');
             const password = document.getElementById('encrypt-password').value;
             
+            // 讀取權限 Checkbox
+            const allowPrint = document.getElementById('perm-print').checked;
+            const allowCopy = document.getElementById('perm-copy').checked;
+            const allowModify = document.getElementById('perm-modify').checked;
+
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
             if (!password) return showStatus("請設定密碼", 'error');
 
@@ -883,14 +913,27 @@
                 const arrayBuffer = await readFile(fileInput.files[0]);
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
                 
+                // 為了讓權限生效，我們需要設定一個隨機的 ownerPassword
+                // 如果 ownerPassword 和 userPassword 一樣，很多閱讀器會直接視為擁有者而開放所有權限
+                const randomOwnerPassword = Math.random().toString(36).slice(-10) + Date.now();
+
+                // 準備權限清單
+                // pdf-lib 1.17.1 使用 Permission enum
+                const permissions = [];
+                if (allowPrint) permissions.push(Permission.Print);
+                if (allowCopy) permissions.push(Permission.Copy);
+                if (allowModify) permissions.push(Permission.Modify);
+                
                 const pdfBytes = await pdfDoc.save({
                     userPassword: password,
-                    ownerPassword: password // 擁有者密碼同使用者密碼
+                    ownerPassword: randomOwnerPassword, // 使用隨機密碼鎖定權限
+                    permissions: permissions
                 });
                 
-                download(pdfBytes, "encrypted.pdf", "application/pdf");
-                showStatus("加密完成！", 'success');
+                download(pdfBytes, "encrypted_secure.pdf", "application/pdf");
+                showStatus("加密與防護完成！", 'success');
             } catch (err) {
+                console.error(err);
                 showStatus("錯誤：" + err.message, 'error');
             }
         }
@@ -906,12 +949,8 @@
             showStatus("正在解密...", 'loading');
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
-                // 在 load 時傳入密碼
                 const pdfDoc = await PDFDocument.load(arrayBuffer, { password: password });
-                
-                // 儲存時不帶參數即為無密碼
                 const pdfBytes = await pdfDoc.save();
-                
                 download(pdfBytes, "decrypted.pdf", "application/pdf");
                 showStatus("解密完成！", 'success');
             } catch (err) {
@@ -919,14 +958,10 @@
             }
         }
 
-        // 6. 浮水印 (Process Watermark)
-        
-        // 輔助函式：將文字轉為圖片 DataURL (解決中文字型問題)
+        // 6. 浮水印
         function textToImageDataUrl(text, color, size) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
-            // 放大倍率，確保文字清晰
             const scale = 3;
             const fontSize = size * scale;
             const font = `${fontSize}px 'Microsoft JhengHei', 'Noto Sans TC', sans-serif`;
@@ -934,12 +969,11 @@
             ctx.font = font;
             const metrics = ctx.measureText(text);
             const width = Math.ceil(metrics.width);
-            const height = Math.ceil(fontSize * 1.2); // 粗略高度
+            const height = Math.ceil(fontSize * 1.2);
             
             canvas.width = width;
             canvas.height = height;
             
-            // 重新設定 Context (因為調整 canvas 大小會重置)
             ctx.font = font;
             ctx.fillStyle = color;
             ctx.textBaseline = 'middle';
@@ -948,7 +982,7 @@
             
             return {
                 dataUrl: canvas.toDataURL('image/png'),
-                width: width / scale,   // 回傳原始大小
+                width: width / scale,
                 height: height / scale
             };
         }
@@ -956,7 +990,6 @@
         async function processWatermark() {
             const fileInput = document.getElementById('file-watermark');
             const type = document.querySelector('input[name="wm-type"]:checked').value;
-            
             const position = document.getElementById('wm-position').value;
             const opacity = parseFloat(document.getElementById('wm-opacity').value);
             const rotation = parseInt(document.getElementById('wm-rotation').value);
@@ -970,7 +1003,6 @@
                 const pdfDoc = await PDFDocument.load(pdfBuffer);
                 const totalPages = pdfDoc.getPageCount();
 
-                // 解析頁面範圍
                 const pagesToApply = new Set();
                 if (!pageRangeInput.trim()) {
                     for (let i = 1; i <= totalPages; i++) pagesToApply.add(i);
@@ -993,19 +1025,15 @@
                     const text = document.getElementById('wm-text').value;
                     const color = document.getElementById('wm-color').value;
                     const size = parseInt(document.getElementById('wm-size').value);
-                    
                     if (!text) return showStatus("請輸入文字內容", 'error');
 
-                    // 使用 Canvas 將文字轉為圖片
                     const { dataUrl, width, height } = textToImageDataUrl(text, color, size);
                     wmImage = await pdfDoc.embedPng(dataUrl);
                     wmWidth = width;
                     wmHeight = height;
-
                 } else {
                     const imgInput = document.getElementById('file-wm-image');
                     const scale = parseFloat(document.getElementById('wm-image-scale').value);
-                    
                     if (imgInput.files.length === 0) return showStatus("請上傳圖片", 'error');
                     
                     const imgFile = imgInput.files[0];
@@ -1033,57 +1061,20 @@
                     let x, y;
                     const margin = 20;
 
-                    // 計算位置
                     switch(position) {
-                        case 'top-left': 
-                            x = margin; 
-                            y = pHeight - wmHeight - margin; 
-                            break;
-                        case 'top-center': 
-                            x = (pWidth - wmWidth) / 2; 
-                            y = pHeight - wmHeight - margin; 
-                            break;
-                        case 'top-right': 
-                            x = pWidth - wmWidth - margin; 
-                            y = pHeight - wmHeight - margin; 
-                            break;
-                        case 'middle-left': 
-                            x = margin; 
-                            y = (pHeight - wmHeight) / 2; 
-                            break;
-                        case 'center': 
-                            x = (pWidth - wmWidth) / 2; 
-                            y = (pHeight - wmHeight) / 2; 
-                            break;
-                        case 'middle-right': 
-                            x = pWidth - wmWidth - margin; 
-                            y = (pHeight - wmHeight) / 2; 
-                            break;
-                        case 'bottom-left': 
-                            x = margin; 
-                            y = margin; 
-                            break;
-                        case 'bottom-center': 
-                            x = (pWidth - wmWidth) / 2; 
-                            y = margin; 
-                            break;
-                        case 'bottom-right': 
-                            x = pWidth - wmWidth - margin; 
-                            y = margin; 
-                            break;
-                        default: // center
-                            x = (pWidth - wmWidth) / 2; 
-                            y = (pHeight - wmHeight) / 2;
+                        case 'top-left': x = margin; y = pHeight - wmHeight - margin; break;
+                        case 'top-center': x = (pWidth - wmWidth) / 2; y = pHeight - wmHeight - margin; break;
+                        case 'top-right': x = pWidth - wmWidth - margin; y = pHeight - wmHeight - margin; break;
+                        case 'middle-left': x = margin; y = (pHeight - wmHeight) / 2; break;
+                        case 'center': x = (pWidth - wmWidth) / 2; y = (pHeight - wmHeight) / 2; break;
+                        case 'middle-right': x = pWidth - wmWidth - margin; y = (pHeight - wmHeight) / 2; break;
+                        case 'bottom-left': x = margin; y = margin; break;
+                        case 'bottom-center': x = (pWidth - wmWidth) / 2; y = margin; break;
+                        case 'bottom-right': x = pWidth - wmWidth - margin; y = margin; break;
+                        default: x = (pWidth - wmWidth) / 2; y = (pHeight - wmHeight) / 2;
                     }
                     
-                    page.drawImage(wmImage, {
-                        x: x,
-                        y: y,
-                        width: wmWidth,
-                        height: wmHeight,
-                        opacity: opacity,
-                        rotate: degrees(rotation),
-                    });
+                    page.drawImage(wmImage, { x, y, width: wmWidth, height: wmHeight, opacity, rotate: degrees(rotation) });
                 });
 
                 const pdfBytes = await pdfDoc.save();
@@ -1095,10 +1086,11 @@
             }
         }
 
-        // 7. 旋轉
+        // 7. 旋轉 (Updated: Page Range)
         async function processRotate() {
             const fileInput = document.getElementById('file-rotate');
             const angle = parseInt(document.getElementById('rotate-angle').value);
+            const pageRangeInput = document.getElementById('rotate-pages').value;
             
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
 
@@ -1107,10 +1099,30 @@
                 const arrayBuffer = await readFile(fileInput.files[0]);
                 const pdfDoc = await PDFDocument.load(arrayBuffer);
                 const pages = pdfDoc.getPages();
+                const totalPages = pdfDoc.getPageCount();
+
+                // 解析要旋轉的頁碼
+                const pagesToRotate = new Set();
+                if (!pageRangeInput.trim()) {
+                    // 若無輸入，預設全部旋轉
+                    for (let i = 1; i <= totalPages; i++) pagesToRotate.add(i);
+                } else {
+                    pageRangeInput.split(',').forEach(part => {
+                        if (part.includes('-')) {
+                            const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                            for (let i = start; i <= end; i++) pagesToRotate.add(i);
+                        } else {
+                            const p = parseInt(part.trim());
+                            if (!isNaN(p)) pagesToRotate.add(p);
+                        }
+                    });
+                }
                 
-                pages.forEach(page => {
-                    const currentRotation = page.getRotation().angle;
-                    page.setRotation(degrees(currentRotation + angle));
+                pages.forEach((page, idx) => {
+                    if (pagesToRotate.has(idx + 1)) {
+                        const currentRotation = page.getRotation().angle;
+                        page.setRotation(degrees(currentRotation + angle));
+                    }
                 });
 
                 const pdfBytes = await pdfDoc.save();
@@ -1121,7 +1133,7 @@
             }
         }
 
-        // 8. 壓縮 (Repack / Rasterize)
+        // 8. 壓縮
         async function processCompress() {
             const fileInput = document.getElementById('file-compress');
             const level = document.getElementById('compress-level').value;
@@ -1129,11 +1141,9 @@
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
 
             showStatus("正在初始化壓縮...", 'loading');
-            
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
 
-                // 模式 1: 低壓縮率 (僅優化結構，不轉圖片)
                 if (level === 'low') {
                     showStatus("正在優化結構...", 'loading');
                     const pdfDoc = await PDFDocument.load(arrayBuffer);
@@ -1143,17 +1153,15 @@
                     return;
                 }
 
-                // 模式 2 & 3: 中/高壓縮率 (轉圖片重製)
-                // 參數設定
                 let scale = 1.0;
                 let quality = 0.5;
 
                 if (level === 'medium') {
-                    scale = 2.0; // 較高解析度，保持閱讀性
-                    quality = 0.7; // 中等 JPG 品質
+                    scale = 2.0; 
+                    quality = 0.7; 
                 } else if (level === 'high') {
-                    scale = 1.5; // 解析度稍降
-                    quality = 0.5; // 較低 JPG 品質
+                    scale = 1.5; 
+                    quality = 0.5; 
                 }
 
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -1172,11 +1180,9 @@
 
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                     
-                    // 轉為 JPG DataURL
                     const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
                     const img = await newPdfDoc.embedJpg(imgDataUrl);
                     
-                    // 計算原始頁面大小 (以 scale 1.0 為基準)
                     const originalViewport = page.getViewport({ scale: 1.0 });
                     
                     const newPage = newPdfDoc.addPage([originalViewport.width, originalViewport.height]);
