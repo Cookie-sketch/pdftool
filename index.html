@@ -181,7 +181,7 @@
                     </div>
                 </section>
 
-                <!-- 10. 圖片轉 PDF [新增] -->
+                <!-- 10. 圖片轉 PDF -->
                 <section id="section-img-to-pdf" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">圖片轉 PDF</h2>
                     <p class="text-gray-500 mb-6 text-sm">上傳多張圖片 (JPG/PNG/WebP)，將它們合併為一份 PDF 文件。</p>
@@ -296,7 +296,7 @@
                     </div>
                 </section>
 
-                <!-- 6. 浮水印 (修正中心點對齊) -->
+                <!-- 6. 浮水印 -->
                 <section id="section-watermark" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">添加浮水印</h2>
                     <p class="text-gray-500 mb-6 text-sm">在頁面中添加文字(支援繁體中文)或圖片浮水印。</p>
@@ -455,7 +455,7 @@
                     </div>
                 </section>
 
-                <!-- 4. 實體防拷 PDF (取代舊的加密) -->
+                <!-- 4. 實體防拷 PDF -->
                 <section id="section-encrypt" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">實體防拷 PDF (唯讀轉換)</h2>
                     <p class="text-gray-500 mb-6 text-sm">將 PDF 所有內容轉換為圖片，徹底防止文字被複製、修改或擷取。</p>
@@ -489,7 +489,7 @@
                     </div>
                 </section>
 
-                <!-- 5. 解密 PDF (修正錯誤處理) -->
+                <!-- 5. 解密 PDF -->
                 <section id="section-decrypt" class="tool-section hidden">
                     <h2 class="text-2xl font-bold text-primary mb-2 border-b pb-2">解密 PDF</h2>
                     <p class="text-gray-500 mb-6 text-sm">輸入已知的密碼，並儲存為不需密碼的副本。</p>
@@ -523,7 +523,7 @@
     </div>
 
     <script>
-        // 設定 PDF.js Worker (用於轉圖、防拷等渲染)
+        // 設定 PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         const { PDFDocument, rgb, degrees } = PDFLib;
 
@@ -618,6 +618,18 @@
             textBox.textContent = msg;
         }
 
+        // --- 錯誤處理輔助函數 ---
+        function handleError(err) {
+            console.error(err);
+            const msg = err.message || String(err);
+            // 針對 pdf-lib 遇到高階加密或未解密時常拋出的底層解析錯誤做攔截
+            if (msg.includes("Expected instance") || msg.includes("undefined") || msg.includes("encrypt") || msg.includes("Password") || msg.includes("Invalid PDF") || msg.includes("crypto")) {
+                showStatus("處理失敗：此 PDF 可能受到密碼或高階加密(如 AES-256)保護，導致前端無法解析。請先移除保全再試。", 'error');
+            } else {
+                showStatus("錯誤：" + msg, 'error');
+            }
+        }
+
         function readFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -659,7 +671,7 @@
 
         // --- 核心功能 ---
 
-        // 1. PDF 轉圖檔 (支援 JPG, PNG, WebP)
+        // 1. PDF 轉圖檔 
         async function processPdfToImg() {
             const fileInput = document.getElementById('file-pdf-to-img');
             const format = document.getElementById('img-format').value;
@@ -696,12 +708,11 @@
                 saveAs(content, `pdf_images_${format}.zip`);
                 showStatus("轉換完成！", 'success');
             } catch (err) {
-                console.error(err);
-                showStatus("處理失敗：" + err.message, 'error');
+                handleError(err);
             }
         }
 
-        // 10. 圖片轉 PDF (新增)
+        // 10. 圖片轉 PDF 
         async function processImgToPdf() {
             const fileInput = document.getElementById('file-img-to-pdf');
             if (fileInput.files.length === 0) return showStatus("請選擇至少一張圖片", 'error');
@@ -710,7 +721,6 @@
             try {
                 const mergedPdf = await PDFDocument.create();
                 
-                // 依檔案名稱排序 (避免上傳順序亂掉)
                 const files = Array.from(fileInput.files).sort((a,b) => a.name.localeCompare(b.name));
 
                 for (let i = 0; i < files.length; i++) {
@@ -722,12 +732,10 @@
                     if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
                         img = await mergedPdf.embedJpg(imgBuffer);
                     } else if (file.type === 'image/png' || file.type === 'image/webp') {
-                        // pdf-lib 支援 png，webp 如果是直接用 FileReader 會有問題，但我們允許嘗試
-                        // 若要確保 WebP 支援，可能需先用 Canvas 轉 PNG，此處直接假設 pdf-lib 可讀
                         try {
                             img = await mergedPdf.embedPng(imgBuffer); 
                         } catch(e) {
-                            // 若直接 embed 失敗(例如 webp)，透過 canvas 中轉
+                            // 若直接 embed 失敗(如 webp)，透過 canvas 中轉
                             const imgUrl = URL.createObjectURL(file);
                             const canvasImg = new Image();
                             canvasImg.src = imgUrl;
@@ -745,7 +753,6 @@
                         continue;
                     }
 
-                    // 每一頁依照圖片自己的寬高創建
                     const page = mergedPdf.addPage([img.width, img.height]);
                     page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
                 }
@@ -754,8 +761,7 @@
                 download(pdfBytes, "images_to_pdf.pdf", "application/pdf");
                 showStatus("合併完成！", 'success');
             } catch (err) {
-                console.error(err);
-                showStatus("處理失敗：" + err.message, 'error');
+                handleError(err);
             }
         }
 
@@ -795,8 +801,7 @@
                 saveAs(blob, "extracted_text.doc");
                 showStatus("提取完成！已下載 Word 檔", 'success');
             } catch (err) {
-                console.error(err);
-                showStatus("錯誤：" + err.message, 'error');
+                handleError(err);
             }
         }
 
@@ -812,7 +817,7 @@
             showStatus("正在分析 PDF...", 'loading');
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
+                const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 const totalPages = pdfDoc.getPageCount();
                 const zip = new JSZip();
 
@@ -876,8 +881,7 @@
                     showStatus("提取完成！", 'success');
                 }
             } catch (err) {
-                console.error(err);
-                showStatus("錯誤：" + err.message, 'error');
+                handleError(err);
             }
         }
 
@@ -893,7 +897,7 @@
 
                 for (const file of files) {
                     const arrayBuffer = await readFile(file);
-                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const pdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                     const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
                     copiedPages.forEach(page => mergedPdf.addPage(page));
                 }
@@ -902,11 +906,11 @@
                 download(pdfBytes, "merged_result.pdf", "application/pdf");
                 showStatus("合併完成！", 'success');
             } catch (err) {
-                showStatus("合併失敗 (可能包含無法讀取的檔案)", 'error');
+                handleError(err);
             }
         }
 
-        // 4. 實體防拷 PDF (Rasterization)
+        // 4. 實體防拷 PDF 
         async function processAntiCopy() {
             const fileInput = document.getElementById('file-encrypt');
             if (fileInput.files.length === 0) return showStatus("請選擇檔案", 'error');
@@ -917,7 +921,6 @@
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 const newPdfDoc = await PDFDocument.create();
 
-                // 使用較高解析度(Scale=2.5)確保文字轉圖片後依舊清晰
                 const scale = 2.5; 
 
                 for (let i = 1; i <= pdf.numPages; i++) {
@@ -933,11 +936,9 @@
 
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                     
-                    // 轉為 JPG 
                     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
                     const img = await newPdfDoc.embedJpg(imgDataUrl);
                     
-                    // 以原來的頁面尺寸(Scale 1.0)新增至 PDF，達成視覺大小不變
                     const originalViewport = page.getViewport({ scale: 1.0 });
                     const newPage = newPdfDoc.addPage([originalViewport.width, originalViewport.height]);
                     newPage.drawImage(img, {
@@ -954,12 +955,11 @@
                 showStatus("防拷轉換完成！", 'success');
 
             } catch (err) {
-                console.error(err);
-                showStatus("錯誤：" + err.message, 'error');
+                handleError(err);
             }
         }
 
-        // 5. 解密 PDF (強化錯誤處理)
+        // 5. 解密 PDF
         async function processDecrypt() {
             const fileInput = document.getElementById('file-decrypt');
             const password = document.getElementById('decrypt-password').value;
@@ -970,25 +970,23 @@
             showStatus("嘗試解密中...", 'loading');
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
-                // pdf-lib 在 load 時傳入 password 即可解密 (支援 RC4, AES-128)
                 const pdfDoc = await PDFDocument.load(arrayBuffer, { password: password });
                 
-                // 重新儲存不帶參數即可變為無密碼
                 const pdfBytes = await pdfDoc.save();
                 download(pdfBytes, "decrypted.pdf", "application/pdf");
                 showStatus("解密成功！", 'success');
             } catch (err) {
                 console.error(err);
-                // 提供精確的報錯
-                if (err.message.includes('Password')) {
+                const msg = err.message || String(err);
+                if (msg.includes('Password') || msg.includes('Expected instance')) {
                     showStatus("解密失敗：密碼錯誤", 'error');
                 } else {
-                    showStatus("解密失敗：密碼錯誤 或 此 PDF 使用了前端不支援的 AES-256 加密格式", 'error');
+                    showStatus("解密失敗：密碼錯誤 或 此 PDF 使用了前端不支援的高階加密格式(如 AES-256)", 'error');
                 }
             }
         }
 
-        // 6. 浮水印 (修正中心點對齊)
+        // 6. 浮水印 
         function textToImageDataUrl(text, color, size) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -999,7 +997,7 @@
             ctx.font = font;
             const metrics = ctx.measureText(text);
             const width = Math.ceil(metrics.width);
-            const height = Math.ceil(fontSize * 1.3); // 留出上下空間
+            const height = Math.ceil(fontSize * 1.3); 
             
             canvas.width = width;
             canvas.height = height;
@@ -1030,7 +1028,7 @@
             showStatus("正在準備浮水印...", 'loading');
             try {
                 const pdfBuffer = await readFile(fileInput.files[0]);
-                const pdfDoc = await PDFDocument.load(pdfBuffer);
+                const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
                 const totalPages = pdfDoc.getPageCount();
 
                 const pagesToApply = parsePageRange(pageRangeInput, totalPages);
@@ -1066,7 +1064,6 @@
 
                 showStatus("正在寫入浮水印...", 'loading');
 
-                // 旋轉角度 (轉為徑度)
                 const rad = rotationDegree * Math.PI / 180;
 
                 const pages = pdfDoc.getPages();
@@ -1075,10 +1072,9 @@
                     if (!pagesToApply.has(pageNum)) return;
 
                     const { width: pWidth, height: pHeight } = page.getSize();
-                    let cx, cy; // 預期中心點
+                    let cx, cy; 
                     const margin = 40;
 
-                    // 計算「不旋轉時的中心點座標」
                     switch(position) {
                         case 'top-left': cx = margin + wmWidth/2; cy = pHeight - margin - wmHeight/2; break;
                         case 'top-center': cx = pWidth/2; cy = pHeight - margin - wmHeight/2; break;
@@ -1092,7 +1088,6 @@
                         default: cx = pWidth/2; cy = pHeight/2;
                     }
                     
-                    // 利用三角函數反推繪圖原點(左下角)，讓旋轉永遠圍繞中心點進行
                     const x = cx - (wmWidth / 2) * Math.cos(rad) + (wmHeight / 2) * Math.sin(rad);
                     const y = cy - (wmWidth / 2) * Math.sin(rad) - (wmHeight / 2) * Math.cos(rad);
                     
@@ -1110,8 +1105,7 @@
                 download(pdfBytes, "watermarked.pdf", "application/pdf");
                 showStatus("浮水印添加完成！", 'success');
             } catch (err) {
-                console.error(err);
-                showStatus("錯誤：" + err.message, 'error');
+                handleError(err);
             }
         }
 
@@ -1126,7 +1120,7 @@
             showStatus("正在旋轉...", 'loading');
             try {
                 const arrayBuffer = await readFile(fileInput.files[0]);
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
+                const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 const pages = pdfDoc.getPages();
                 const totalPages = pdfDoc.getPageCount();
 
@@ -1143,7 +1137,7 @@
                 download(pdfBytes, "rotated.pdf", "application/pdf");
                 showStatus("旋轉完成！", 'success');
             } catch (err) {
-                showStatus("錯誤：" + err.message, 'error');
+                handleError(err);
             }
         }
 
@@ -1160,7 +1154,7 @@
 
                 if (level === 'low') {
                     showStatus("正在優化結構...", 'loading');
-                    const pdfDoc = await PDFDocument.load(arrayBuffer);
+                    const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                     const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
                     download(pdfBytes, "compressed_low.pdf", "application/pdf");
                     showStatus("優化完成！", 'success');
@@ -1203,8 +1197,7 @@
                 showStatus("壓縮完成！", 'success');
 
             } catch (err) {
-                console.error(err);
-                showStatus("錯誤：" + err.message, 'error');
+                handleError(err);
             }
         }
     </script>
